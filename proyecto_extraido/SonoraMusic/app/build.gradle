@@ -1,0 +1,45 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.sonora.music'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.sonora.music'
+        minSdk 23
+        targetSdk 35
+        versionCode 7
+        versionName '1.5.1'
+    }
+
+    // Release signing is enabled only when credentials are supplied through environment
+    // variables (GitHub Actions Secrets in CI). Never commit the keystore or passwords.
+    def ksPath = System.getenv('SONORA_KEYSTORE_PATH')
+    def ksPassword = System.getenv('SONORA_KEYSTORE_PASSWORD')
+    def keyAliasValue = System.getenv('SONORA_KEY_ALIAS')
+    def keyPasswordValue = System.getenv('SONORA_KEY_PASSWORD')
+    if (ksPath && ksPassword && keyAliasValue && keyPasswordValue) {
+        signingConfigs {
+            release {
+                storeFile file(ksPath)
+                storePassword ksPassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig signingConfigs.release
+                minifyEnabled false
+            }
+        }
+    } else {
+        buildTypes {
+            release { minifyEnabled false }
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.15.0'
+    implementation 'androidx.media:media:1.7.0'
+}
