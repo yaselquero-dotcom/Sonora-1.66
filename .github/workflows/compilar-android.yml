@@ -1,0 +1,51 @@
+
+name: Compilar Sonora Music Android
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilar APK
+        shell: bash
+        run: |
+          set -e
+          WRAPPER=$(find . -type f -name gradlew \
+            -not -path '*/.gradle/*' | head -n 1)
+
+          if [ -z "$WRAPPER" ]; then
+            echo "ERROR: No se encontro gradlew"
+            echo "Comprueba que el proyecto incluya el Gradle Wrapper."
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$WRAPPER")
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sonora-Music-APK
+          path: '**/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
+          retention-days: 7
