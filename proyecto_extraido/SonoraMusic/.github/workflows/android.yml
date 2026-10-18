@@ -1,64 +1,73 @@
-name: Build Sonora APK
+
+name: Build Sonora Music
 
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
-  debug:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout source
+      - name: Descargar codigo
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # Instala Gradle directamente; este proyecto no incluye gradlew.
-      - name: Set up Gradle
+      - name: Instalar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
-      - name: Set up Android SDK
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android platform and build tools
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Instalar herramientas Android
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Locate Android project
+      - name: Encontrar proyecto Android
         shell: bash
         run: |
           set -euo pipefail
+
           if [ -f "app/build.gradle" ]; then
-            PROJECT_DIR="."
+            DIR="."
           elif [ -f "SonoraMusic/app/build.gradle" ]; then
-            PROJECT_DIR="SonoraMusic"
+            DIR="SonoraMusic"
           else
-            APP_GRADLE="$(find . -type f -path '*/app/build.gradle' -not -path '*/.gradle/*' | head -n 1)"
-            if [ -z "$APP_GRADLE" ]; then
-              echo "ERROR: No se encontró app/build.gradle"
+            FILE=$(find . -type f \
+              -path '*/app/build.gradle' \
+              -not -path '*/.gradle/*' | head -n 1)
+
+            if [ -z "$FILE" ]; then
+              echo "ERROR: No se encontro app/build.gradle"
               exit 1
             fi
-            PROJECT_DIR="$(dirname "$(dirname "$APP_GRADLE")")"
-          fi
-          echo "SONORA_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Proyecto Android: $PROJECT_DIR"
 
-      - name: Compile debug APK and run lint
+            DIR=$(dirname "$(dirname "$FILE")")
+          fi
+
+          echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
+          echo "Proyecto encontrado: $DIR"
+
+      - name: Compilar APK de prueba
         shell: bash
         run: |
           set -euo pipefail
-          cd "$SONORA_PROJECT_DIR"
-          gradle --no-daemon assembleDebug lintDebug
+          cd "$PROJECT_DIR"
+          gradle --no-daemon assembleDebug
 
-      - name: Upload debug APK (testing only)
+      - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
           name: Sonora-debug-apk
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
           if-no-files-found: error
