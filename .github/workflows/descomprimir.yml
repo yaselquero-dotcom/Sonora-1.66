@@ -1,0 +1,46 @@
+
+name: Descomprimir proyecto ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extraer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Extraer ZIP
+        run: |
+          mkdir -p proyecto_extraido
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          archivos = list(Path(".").glob("*.zip"))
+          if not archivos:
+              raise SystemExit("No se encontró ningún ZIP en la raíz.")
+
+          zip_path = archivos[0]
+          with zipfile.ZipFile(zip_path) as z:
+              for item in z.infolist():
+                  destino = (Path("proyecto_extraido") / item.filename).resolve()
+                  if not destino.is_relative_to(Path("proyecto_extraido").resolve()):
+                      raise SystemExit("El ZIP contiene una ruta no permitida.")
+              z.extractall("proyecto_extraido")
+
+          print(f"Extraído: {zip_path}")
+          PY
+
+      - name: Guardar archivos extraídos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proyecto_extraido
+          git commit -m "Extraer archivos del proyecto ZIP" || echo "No hay cambios"
+          git push
+          
